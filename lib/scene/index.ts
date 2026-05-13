@@ -143,17 +143,20 @@ function animate(): void {
 // gl.getParameter(gl.VERSION) can return null when too many WebGL contexts
 // are active (GPU context slots exhausted), which causes Three.js WebGLState
 // to crash with "Cannot read properties of null (reading 'indexOf')".
-function isWebGLHealthy(canvas: HTMLCanvasElement): boolean {
+function isWebGLHealthy(): boolean {
+  // Use a throwaway canvas — never the real one, which would poison it
+  // before Three.js gets a chance to create its own context on it.
   try {
+    const probe = document.createElement('canvas')
+    probe.width = 1
+    probe.height = 1
     const gl =
-      (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ||
-      (canvas.getContext('webgl') as WebGLRenderingContext | null)
+      (probe.getContext('webgl2') as WebGL2RenderingContext | null) ||
+      (probe.getContext('webgl') as WebGLRenderingContext | null)
     if (!gl) return false
     const version = gl.getParameter(gl.VERSION)
     if (typeof version !== 'string' || version.length === 0) return false
-    // Release the context we just created so Three.js can make its own
-    const ext = gl.getExtension('WEBGL_lose_context')
-    ext?.loseContext()
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
     return true
   } catch {
     return false
@@ -171,7 +174,7 @@ export function initScene(canvas: HTMLCanvasElement): void {
   isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   // 3. Pre-flight WebGL health check — bail silently if GPU context is unavailable
-  if (!isWebGLHealthy(canvas)) {
+  if (!isWebGLHealthy()) {
     console.warn('[scene] WebGL unavailable or context limit reached — skipping 3D background')
     return
   }
