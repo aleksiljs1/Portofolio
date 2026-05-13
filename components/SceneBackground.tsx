@@ -2,18 +2,29 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { initScene, destroyScene } from '@/lib/scene'
+import { initScene, destroyScene, transitionScene } from '@/lib/scene'
+
+const PAGE_ORDER = ['/', '/projects', '/experience', '/about']
 
 export default function SceneBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const pathname  = usePathname()
+  const canvasRef   = useRef<HTMLCanvasElement>(null)
+  const pathname    = usePathname()
+  const prevPathRef = useRef<string | null>(null)
 
+  // Init renderer ONCE on mount
   useEffect(() => {
     if (!canvasRef.current) return
-    const mode = pathname === '/' ? 'home' : 'default'
-    initScene(canvasRef.current, mode)
+    prevPathRef.current = pathname
+    initScene(canvasRef.current, pathname)
     return () => destroyScene()
-  }, [pathname])   // reinit when route changes
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Slide gears on route change
+  useEffect(() => {
+    if (prevPathRef.current === null || prevPathRef.current === pathname) return
+    prevPathRef.current = pathname
+    transitionScene(pathname)
+  }, [pathname])
 
   return (
     <canvas
