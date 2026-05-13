@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import SceneBackgroundLoader from '@/components/SceneBackgroundLoader'
 import Providers from '@/lib/providers'
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 import { Toaster } from 'sonner'
 
 const geistSans = Geist({
@@ -33,9 +35,11 @@ export default function RootLayout({
       <body className="bg-[#050810]">
         <SceneBackgroundLoader />
         <Providers>
+          <Navbar />
           <main className="relative z-10 min-h-screen">
             {children}
           </main>
+          <Footer />
           <Toaster position="bottom-right" theme="dark" />
         </Providers>
       </body>
