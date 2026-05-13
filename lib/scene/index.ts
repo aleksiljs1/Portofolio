@@ -126,7 +126,8 @@ function animate(): void {
   }
 
   if (sceneGroup) {
-    sceneGroup.rotation.y += 0.00015
+    // 0.0008 rad/frame × 60fps = full rotation in ~130 seconds — actually visible
+    sceneGroup.rotation.y += currentMode === 'home' ? 0.0004 : 0.0008
   }
 
   if (currentMode === 'home') {
@@ -240,6 +241,7 @@ export function initScene(canvas: HTMLCanvasElement, mode: SceneMode = 'default'
       createSparks(sceneGroup)
       createParticles(sceneGroup, Math.floor(config.particles * 0.4))
     } else {
+      createStars(sceneGroup, 800)   // lighter starfield on non-home pages
       const edgeList = generateEdges(config.nodes)
       const positions = computeLayout(config.nodes, edgeList)
       nodeCount = config.nodes
@@ -274,10 +276,12 @@ export function initScene(canvas: HTMLCanvasElement, mode: SceneMode = 'default'
     // 10. Node pulse interval
     pulseIntervalId = setInterval(() => {
       if (nodeCount > 0) {
-        const idx = Math.floor(Math.random() * nodeCount)
-        pulseNode(idx)
+        // Pulse 3 random nodes at once so the lattice always looks active
+        for (let i = 0; i < 3; i++) {
+          pulseNode(Math.floor(Math.random() * nodeCount))
+        }
       }
-    }, 2500)
+    }, 1200)
 
     // 11. Start animation loop
     animate()
