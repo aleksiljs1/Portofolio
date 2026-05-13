@@ -6,6 +6,7 @@ import { createParticles, updateParticles, disposeParticles } from './particles'
 import { initBloom, renderWithBloom, disposeBloom } from './postfx'
 import { createGears, updateGears, disposeGears } from './gears'
 import { createSparks, updateSparks, disposeSparks } from './sparks'
+import { createStars, disposeStars } from './stars'
 
 type SceneMode = 'home' | 'default'
 let currentMode: SceneMode = 'default'
@@ -234,9 +235,10 @@ export function initScene(canvas: HTMLCanvasElement, mode: SceneMode = 'default'
 
     // 6. Geometry — home gets gears+sparks, other pages get neural lattice
     if (mode === 'home') {
+      createStars(sceneGroup)
       createGears(sceneGroup)
       createSparks(sceneGroup)
-      createParticles(sceneGroup, Math.floor(config.particles * 0.6))
+      createParticles(sceneGroup, Math.floor(config.particles * 0.4))
     } else {
       const edgeList = generateEdges(config.nodes)
       const positions = computeLayout(config.nodes, edgeList)
@@ -246,8 +248,8 @@ export function initScene(canvas: HTMLCanvasElement, mode: SceneMode = 'default'
       createParticles(sceneGroup, config.particles)
     }
 
-    // 7. Bloom (desktop only)
-    bloomEnabled = config.bloom
+    // 7. Bloom — always on for home (gears glow), config-gated for other pages
+    bloomEnabled = mode === 'home' ? true : config.bloom
     if (bloomEnabled) {
       try {
         initBloom(renderer, scene, camera)
@@ -310,6 +312,7 @@ export function destroyScene(): void {
   disposeParticles()
   disposeGears()
   disposeSparks()
+  disposeStars()
   disposeBloom()
 
   // Remove event listeners

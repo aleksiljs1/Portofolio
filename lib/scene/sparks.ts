@@ -1,20 +1,20 @@
 import { Points, BufferGeometry, BufferAttribute, ShaderMaterial, AdditiveBlending } from 'three'
 import type { Object3D } from 'three'
 
-const SPARK_COUNT = 280
+const SPARK_COUNT = 500
 
 // Per-spark state (CPU-side)
 const pos  = new Float32Array(SPARK_COUNT * 3)
 const vel  = new Float32Array(SPARK_COUNT * 3)  // velocity
 const life = new Float32Array(SPARK_COUNT)        // 0→1, 1 = just born
 
-// Emitter origins — near gear centres
+// Emitter origins — match gear positions
 const EMITTERS = [
-  [  2,  0, -4 ],
-  [ -5,  1.5, -2 ],
-  [  5.5, -1, -1 ],
-  [  3,  2.5,  0 ],
-  [ -1, -3.5, -5 ],
+  [ -9,  6,  -8 ],   // top-left large gear
+  [ 10, -6,  -5 ],   // bottom-right gear
+  [ 10,  6,  -2 ],   // top-right gear
+  [ -9, -5,  -1 ],   // bottom-left gear
+  [ -4,  1.5, 1 ],   // centre-left small gear
 ]
 
 let geometry: BufferGeometry | null = null
@@ -28,7 +28,7 @@ function respawn(i: number) {
   pos[i * 3 + 1] = e[1] + (Math.random() - 0.5) * 2
   pos[i * 3 + 2] = e[2] + (Math.random() - 0.5) * 1.5
 
-  const speed = 0.01 + Math.random() * 0.03
+  const speed = 0.015 + Math.random() * 0.045
   const theta = Math.random() * Math.PI * 2
   const phi   = Math.random() * Math.PI
   vel[i * 3]     = Math.sin(phi) * Math.cos(theta) * speed

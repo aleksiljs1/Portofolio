@@ -1,103 +1,126 @@
 import {
-  EdgesGeometry, LineSegments, LineBasicMaterial,
-  TorusGeometry, CylinderGeometry,
+  BufferGeometry, Float32BufferAttribute, LineLoop, LineBasicMaterial,
+  Points, PointsMaterial, AdditiveBlending, Group,
 } from 'three'
 import type { Object3D } from 'three'
 
-interface GearDef {
-  radius: number; tube: number; radSeg: number; tubeSeg: number
-  x: number; y: number; z: number
-  rotSpeedX: number; rotSpeedY: number; rotSpeedZ: number
-  color: number; opacity: number
+// Creates a flat gear outline (toothed circle) as a LineLoop
+function gearOutlineGeo(outerR: number, innerR: number, teeth: number): BufferGeometry {
+  const pts: number[] = []
+  const steps = teeth * 4   // 4 vertices per tooth: rise, top, top, fall
+
+  for (let i = 0; i <= steps; i++) {
+    const t    = i / steps
+    const ang  = t * Math.PI * 2
+    // Tooth profile: outer radius at 0° and 50% of tooth width, inner at 25% and 75%
+    const phase = (i % 4)
+    const r     = (phase === 1 || phase === 2) ? outerR : innerR
+    pts.push(Math.cos(ang) * r, Math.sin(ang) * r, 0)
+  }
+
+  const geo = new BufferGeometry()
+  geo.setAttribute('position', new Float32BufferAttribute(pts, 3))
+  return geo
 }
 
-// Gears live at the screen EDGES so they're visible around/behind the hero card.
-// Camera is at z=12, FOV=60 → at z=0 the half-width is ~12*tan(30°)≈6.9 units.
-// So x:±8 is clearly off-screen-center; y:±5 is top/bottom edge area.
-const GEAR_DEFS: GearDef[] = [
-  // Huge back ring — top-left, mostly visible, slow rotation
-  { radius: 8.5, tube: 0.1, radSeg: 8, tubeSeg: 24,
-    x: -7,  y: 4,   z: -6,
-    rotSpeedX: 0.0001, rotSpeedY: 0.0003, rotSpeedZ: 0.0002,
-    color: 0x38bdf8, opacity: 0.75 },
+// Spoke circle for the gear hub
+function hubGeo(r: number, spokes: number): BufferGeometry {
+  const pts: number[] = []
+  // Outer ring
+  const segs = 48
+  for (let i = 0; i <= segs; i++) {
+    const a = (i / segs) * Math.PI * 2
+    pts.push(Math.cos(a) * r, Math.sin(a) * r, 0)
+  }
+  const geo = new BufferGeometry()
+  geo.setAttribute('position', new Float32BufferAttribute(pts, 3))
+  return geo
+}
 
-  // Large ring — bottom-right corner
-  { radius: 6.0, tube: 0.08, radSeg: 7, tubeSeg: 20,
-    x: 8, y: -4.5, z: -3,
-    rotSpeedX: 0.0002, rotSpeedY: -0.0002, rotSpeedZ: 0.0004,
-    color: 0x818cf8, opacity: 0.70 },
+interface GearConfig {
+  outerR: number; innerR: number; teeth: number
+  hubR: number; x: number; y: number; z: number
+  color: number; opacity: number
+  speed: number   // rotation speed rad/frame
+}
 
-  // Medium ring — top-right
-  { radius: 3.8, tube: 0.07, radSeg: 6, tubeSeg: 16,
-    x: 7.5, y: 4.5, z: -1,
-    rotSpeedX: -0.0004, rotSpeedY: 0.0005, rotSpeedZ: 0.0003,
-    color: 0x38bdf8, opacity: 0.80 },
-
-  // Small tight ring — bottom-left
-  { radius: 2.5, tube: 0.06, radSeg: 5, tubeSeg: 14,
-    x: -7, y: -4, z: 0,
-    rotSpeedX: 0.0006, rotSpeedY: -0.0003, rotSpeedZ: 0.0008,
-    color: 0xa78bfa, opacity: 0.85 },
-
-  // Flat disc ring — far back centre, bleeds around card edges
-  { radius: 7.0, tube: 0.05, radSeg: 16, tubeSeg: 8,
-    x: 0, y: 0, z: -8,
-    rotSpeedX: 0.0001, rotSpeedY: 0.0002, rotSpeedZ: 0.00015,
-    color: 0x7dd3fc, opacity: 0.35 },
-
-  // Inner accent ring — left mid
-  { radius: 1.8, tube: 0.055, radSeg: 9, tubeSeg: 12,
-    x: -4, y: 1, z: 1,
-    rotSpeedX: -0.0007, rotSpeedY: 0.001, rotSpeedZ: 0.0005,
-    color: 0xc4b5fd, opacity: 0.90 },
+const GEARS: GearConfig[] = [
+  // Huge background gear, top-left
+  { outerR: 9,   innerR: 7.5, teeth: 22, hubR: 2.5,
+    x: -9,  y: 6,   z: -8,  color: 0x38bdf8, opacity: 0.7,  speed:  0.0004 },
+  // Large gear, bottom-right
+  { outerR: 6.5, innerR: 5.2, teeth: 16, hubR: 1.8,
+    x: 10,  y: -6,  z: -5,  color: 0x818cf8, opacity: 0.75, speed: -0.0006 },
+  // Medium gear, top-right
+  { outerR: 4.5, innerR: 3.5, teeth: 12, hubR: 1.2,
+    x: 10,  y: 6,   z: -2,  color: 0x38bdf8, opacity: 0.80, speed:  0.001  },
+  // Small gear, bottom-left
+  { outerR: 3.0, innerR: 2.3, teeth: 8,  hubR: 0.8,
+    x: -9,  y: -5,  z: -1,  color: 0xa78bfa, opacity: 0.85, speed: -0.0015 },
+  // Tiny accent gear, centre-left
+  { outerR: 1.8, innerR: 1.3, teeth: 6,  hubR: 0.5,
+    x: -4,  y: 1.5, z:  1,  color: 0x67e8f9, opacity: 0.90, speed:  0.002  },
 ]
 
-type GearLine = LineSegments & { _rotSpeed: { x: number; y: number; z: number } }
-const gearLines: GearLine[] = []
+type GearGroup = Group & { _speed: number }
+const gearGroups: GearGroup[] = []
 
 export function createGears(scene: Object3D): void {
-  for (const def of GEAR_DEFS) {
-    const torus = new TorusGeometry(def.radius, def.tube, def.radSeg, def.tubeSeg)
-    const edges = new EdgesGeometry(torus)
-    const mat   = new LineBasicMaterial({ color: def.color, opacity: def.opacity, transparent: true })
-    const line  = new LineSegments(edges, mat) as unknown as GearLine
-    line.position.set(def.x, def.y, def.z)
-    line._rotSpeed = { x: def.rotSpeedX, y: def.rotSpeedY, z: def.rotSpeedZ }
-    gearLines.push(line)
-    scene.add(line)
-    torus.dispose()
+  for (const g of GEARS) {
+    const group = new Group() as GearGroup
+    group._speed = g.speed
+    group.position.set(g.x, g.y, g.z)
 
-    // Spokes — 3 diameters per ring, same rotation as ring
-    const spokeGeo  = new CylinderGeometry(0.012, 0.012, def.radius * 1.9, 4)
-    const spokeEdge = new EdgesGeometry(spokeGeo)
-    for (let s = 0; s < 3; s++) {
-      const spoke = new LineSegments(
-        spokeEdge,
-        new LineBasicMaterial({ color: def.color, opacity: def.opacity * 0.55, transparent: true }),
-      ) as unknown as GearLine
-      spoke.position.set(def.x, def.y, def.z)
-      spoke.rotation.set(Math.PI / 2, (s * Math.PI) / 3, 0)
-      spoke._rotSpeed = { x: def.rotSpeedX, y: def.rotSpeedY, z: def.rotSpeedZ }
-      gearLines.push(spoke)
-      scene.add(spoke)
+    // Outer toothed ring
+    const teethGeo = gearOutlineGeo(g.outerR, g.innerR, g.teeth)
+    const teethMat = new LineBasicMaterial({ color: g.color, opacity: g.opacity, transparent: true })
+    group.add(new LineLoop(teethGeo, teethMat))
+
+    // Hub ring
+    const hubG   = hubGeo(g.hubR, 6)
+    const hubMat = new LineBasicMaterial({ color: g.color, opacity: g.opacity * 0.6, transparent: true })
+    group.add(new LineLoop(hubG, hubMat))
+
+    // Spokes — 4 lines from hub to inner radius
+    for (let s = 0; s < 4; s++) {
+      const ang    = (s / 4) * Math.PI * 2
+      const spokeP = new Float32Array([
+        Math.cos(ang) * g.hubR,         Math.sin(ang) * g.hubR,         0,
+        Math.cos(ang) * (g.innerR - 0.3), Math.sin(ang) * (g.innerR - 0.3), 0,
+      ])
+      const spokeGeo = new BufferGeometry()
+      spokeGeo.setAttribute('position', new Float32BufferAttribute(spokeP, 3))
+      const spokeMat = new LineBasicMaterial({ color: g.color, opacity: g.opacity * 0.5, transparent: true })
+      group.add(new LineLoop(spokeGeo, spokeMat))
     }
-    spokeGeo.dispose()
+
+    // Glowing centre dot
+    const dotGeo = new BufferGeometry()
+    dotGeo.setAttribute('position', new Float32BufferAttribute([0, 0, 0], 3))
+    const dotMat = new PointsMaterial({
+      color: g.color, size: g.hubR * 0.6,
+      blending: AdditiveBlending, transparent: true, opacity: 0.9, depthWrite: false,
+    })
+    group.add(new Points(dotGeo, dotMat))
+
+    gearGroups.push(group)
+    scene.add(group)
   }
 }
 
 export function updateGears(_time: number): void {
-  for (const l of gearLines) {
-    l.rotation.x += l._rotSpeed.x
-    l.rotation.y += l._rotSpeed.y
-    l.rotation.z += l._rotSpeed.z
+  for (const g of gearGroups) {
+    g.rotation.z += g._speed
   }
 }
 
 export function disposeGears(): void {
-  for (const l of gearLines) {
-    l.removeFromParent()
-    l.geometry.dispose()
-    ;(l.material as LineBasicMaterial).dispose()
+  for (const g of gearGroups) {
+    g.removeFromParent()
+    g.traverse((child) => {
+      if ((child as any).geometry) (child as any).geometry.dispose()
+      if ((child as any).material) (child as any).material.dispose()
+    })
   }
-  gearLines.length = 0
+  gearGroups.length = 0
 }
