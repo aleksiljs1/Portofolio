@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { MenuIcon, X } from 'lucide-react'
 import {
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router = useRouter()
   const setActiveTech = useFilterStore((s) => s.setActiveTech)
 
   const { data: techItems = [] } = useQuery<TechItem[]>({
@@ -76,9 +78,7 @@ export default function Navbar() {
               >
                 <DropdownMenuTrigger
                   className="text-white/70 hover:text-white transition-colors text-sm bg-transparent border-0 p-0 cursor-pointer"
-                  render={
-                    <Link href="/projects" className="text-white/70 hover:text-white transition-colors text-sm" />
-                  }
+                  onClick={() => router.push('/projects')}
                 >
                   Projects
                 </DropdownMenuTrigger>
