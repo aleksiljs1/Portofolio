@@ -139,6 +139,27 @@ function animate(): void {
 // Public API
 // ---------------------------------------------------------------------------
 
+// Pre-validate WebGL context before handing to Three.js.
+// gl.getParameter(gl.VERSION) can return null when too many WebGL contexts
+// are active (GPU context slots exhausted), which causes Three.js WebGLState
+// to crash with "Cannot read properties of null (reading 'indexOf')".
+function isWebGLHealthy(canvas: HTMLCanvasElement): boolean {
+  try {
+    const gl =
+      (canvas.getContext('webgl2') as WebGL2RenderingContext | null) ||
+      (canvas.getContext('webgl') as WebGLRenderingContext | null)
+    if (!gl) return false
+    const version = gl.getParameter(gl.VERSION)
+    if (typeof version !== 'string' || version.length === 0) return false
+    // Release the context we just created so Three.js can make its own
+    const ext = gl.getExtension('WEBGL_lose_context')
+    ext?.loseContext()
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function initScene(canvas: HTMLCanvasElement): void {
   isDestroyed = false
 
@@ -149,79 +170,97 @@ export function initScene(canvas: HTMLCanvasElement): void {
   // 2. Reduced motion check
   isReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-  // 3. Renderer
-  renderer = new WebGLRenderer({
-    canvas,
-    antialias: false,
-    alpha: true,
-    powerPreference: 'low-power',
-    precision: 'lowp',
-  })
-
-  const w = window.innerWidth
-  const h = window.innerHeight
-
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
-  renderer.setSize(w, h, false)
-  renderer.setClearColor(0x000000, 0)
-
-  // 4. Scene + Camera + Fog
-  scene = new Scene()
-  camera = new PerspectiveCamera(60, w / h, 0.1, 100)
-  camera.position.set(0, 0, 18)
-  camera.lookAt(0, 0, 0)
-  scene.fog = new FogExp2(0x050810, 0.045)
-
-  // Scene group for Y-rotation
-  sceneGroup = new Group()
-  scene.add(sceneGroup)
-
-  // Low tier: apply static CSS gradient on body and bail out after one frame
-  if (tier === 'low') {
-    document.body.style.background =
-      'linear-gradient(135deg, #050810 0%, #0a1020 50%, #050810 100%)'
-    renderer.render(scene, camera)
+  // 3. Pre-flight WebGL health check — bail silently if GPU context is unavailable
+  if (!isWebGLHealthy(canvas)) {
+    console.warn('[scene] WebGL unavailable or context limit reached — skipping 3D background')
     return
   }
 
-  // 5. Geometry
-  const edgeList = generateEdges(config.nodes)
-  const positions = computeLayout(config.nodes, edgeList)
-
-  nodeCount = config.nodes
-
-  createNodes(sceneGroup, positions)
-  createEdges(sceneGroup, positions, edgeList)
-  createParticles(sceneGroup, config.particles)
-
-  // 6. Bloom (only if config says so)
-  bloomEnabled = config.bloom
-  if (bloomEnabled) {
-    initBloom(renderer, scene, camera)
-  }
-
-  // 7. Reduced motion: render one static frame and stop
-  if (isReducedMotion) {
-    renderer.render(scene, camera)
+  // 4. Renderer (wrapped — belt-and-suspenders against driver edge cases)
+  try {
+    renderer = new WebGLRenderer({
+      canvas,
+      antialias: false,
+      alpha: true,
+      powerPreference: 'low-power',
+      precision: 'mediump', // lowp causes precision issues on some drivers
+    })
+  } catch (e) {
+    console.warn('[scene] WebGLRenderer construction failed:', e)
     return
   }
 
-  // 8. Event listeners
-  window.addEventListener('scroll', onScroll, { passive: true })
-  window.addEventListener('mousemove', onMouseMove)
-  window.addEventListener('resize', onResize)
-  document.addEventListener('visibilitychange', onVisibilityChange)
+  try {
+    const w = window.innerWidth
+    const h = window.innerHeight
 
-  // 9. Node pulse interval — every 2500ms
-  pulseIntervalId = setInterval(() => {
-    if (nodeCount > 0) {
-      const idx = Math.floor(Math.random() * nodeCount)
-      pulseNode(idx)
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5))
+    renderer.setSize(w, h, false)
+    renderer.setClearColor(0x000000, 0)
+
+    // 5. Scene + Camera + Fog
+    scene = new Scene()
+    camera = new PerspectiveCamera(60, w / h, 0.1, 100)
+    camera.position.set(0, 0, 18)
+    camera.lookAt(0, 0, 0)
+    scene.fog = new FogExp2(0x050810, 0.045)
+
+    sceneGroup = new Group()
+    scene.add(sceneGroup)
+
+    // Low tier: static gradient, one frame, done
+    if (tier === 'low') {
+      document.body.style.background =
+        'linear-gradient(135deg, #050810 0%, #0a1020 50%, #050810 100%)'
+      renderer.render(scene, camera)
+      return
     }
-  }, 2500)
 
-  // 10. Start animation loop
-  animate()
+    // 6. Geometry
+    const edgeList = generateEdges(config.nodes)
+    const positions = computeLayout(config.nodes, edgeList)
+    nodeCount = config.nodes
+    createNodes(sceneGroup, positions)
+    createEdges(sceneGroup, positions, edgeList)
+    createParticles(sceneGroup, config.particles)
+
+    // 7. Bloom (desktop only)
+    bloomEnabled = config.bloom
+    if (bloomEnabled) {
+      try {
+        initBloom(renderer, scene, camera)
+      } catch (e) {
+        console.warn('[scene] Bloom init failed, continuing without it:', e)
+        bloomEnabled = false
+      }
+    }
+
+    // 8. Reduced motion: one static frame
+    if (isReducedMotion) {
+      renderer.render(scene, camera)
+      return
+    }
+
+    // 9. Event listeners
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('resize', onResize)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    // 10. Node pulse interval
+    pulseIntervalId = setInterval(() => {
+      if (nodeCount > 0) {
+        const idx = Math.floor(Math.random() * nodeCount)
+        pulseNode(idx)
+      }
+    }, 2500)
+
+    // 11. Start animation loop
+    animate()
+  } catch (e) {
+    console.warn('[scene] Scene initialisation failed:', e)
+    destroyScene()
+  }
 }
 
 export function destroyScene(): void {
