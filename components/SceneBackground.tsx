@@ -1,16 +1,19 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { initScene, destroyScene } from '@/lib/scene'
 
 export default function SceneBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const pathname  = usePathname()
 
   useEffect(() => {
     if (!canvasRef.current) return
-    initScene(canvasRef.current)
+    const mode = pathname === '/' ? 'home' : 'default'
+    initScene(canvasRef.current, mode)
     return () => destroyScene()
-  }, [])
+  }, [pathname])   // reinit when route changes
 
   return (
     <canvas

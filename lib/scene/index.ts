@@ -4,6 +4,11 @@ import { createNodes, pulseNode, updateNodes, disposeNodes } from './nodes'
 import { createEdges, disposeEdges } from './edges'
 import { createParticles, updateParticles, disposeParticles } from './particles'
 import { initBloom, renderWithBloom, disposeBloom } from './postfx'
+import { createGears, updateGears, disposeGears } from './gears'
+import { createSparks, updateSparks, disposeSparks } from './sparks'
+
+type SceneMode = 'home' | 'default'
+let currentMode: SceneMode = 'default'
 
 // ---------------------------------------------------------------------------
 // Module-level state — all accessible by destroyScene
@@ -123,7 +128,12 @@ function animate(): void {
     sceneGroup.rotation.y += 0.00015
   }
 
-  updateNodes(t)
+  if (currentMode === 'home') {
+    updateGears(t)
+    updateSparks(t)
+  } else {
+    updateNodes(t)
+  }
   updateParticles(t)
 
   if (renderer && scene && camera) {
@@ -163,7 +173,8 @@ function isWebGLHealthy(): boolean {
   }
 }
 
-export function initScene(canvas: HTMLCanvasElement): void {
+export function initScene(canvas: HTMLCanvasElement, mode: SceneMode = 'default'): void {
+  currentMode = mode
   isDestroyed = false
 
   // 1. Hardware detection
@@ -204,9 +215,11 @@ export function initScene(canvas: HTMLCanvasElement): void {
     // 5. Scene + Camera + Fog
     scene = new Scene()
     camera = new PerspectiveCamera(60, w / h, 0.1, 100)
-    camera.position.set(0, 0, 14)   // closer = bigger nodes on screen
+    const camZ = mode === 'home' ? 12 : 14
+    camera.position.set(0, 0, camZ)
     camera.lookAt(0, 0, 0)
-    scene.fog = new FogExp2(0x050810, 0.018)  // much thinner fog
+    const fogDensity = mode === 'home' ? 0.012 : 0.018
+    scene.fog = new FogExp2(0x050810, fogDensity)
 
     sceneGroup = new Group()
     scene.add(sceneGroup)
@@ -219,13 +232,19 @@ export function initScene(canvas: HTMLCanvasElement): void {
       return
     }
 
-    // 6. Geometry
-    const edgeList = generateEdges(config.nodes)
-    const positions = computeLayout(config.nodes, edgeList)
-    nodeCount = config.nodes
-    createNodes(sceneGroup, positions)
-    createEdges(sceneGroup, positions, edgeList)
-    createParticles(sceneGroup, config.particles)
+    // 6. Geometry — home gets gears+sparks, other pages get neural lattice
+    if (mode === 'home') {
+      createGears(sceneGroup)
+      createSparks(sceneGroup)
+      createParticles(sceneGroup, Math.floor(config.particles * 0.6))
+    } else {
+      const edgeList = generateEdges(config.nodes)
+      const positions = computeLayout(config.nodes, edgeList)
+      nodeCount = config.nodes
+      createNodes(sceneGroup, positions)
+      createEdges(sceneGroup, positions, edgeList)
+      createParticles(sceneGroup, config.particles)
+    }
 
     // 7. Bloom (desktop only)
     bloomEnabled = config.bloom
@@ -289,6 +308,8 @@ export function destroyScene(): void {
   disposeNodes()
   disposeEdges()
   disposeParticles()
+  disposeGears()
+  disposeSparks()
   disposeBloom()
 
   // Remove event listeners
