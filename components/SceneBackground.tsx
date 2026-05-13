@@ -15,7 +15,7 @@ export default function SceneBackground() {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 -z-10 w-full h-full pointer-events-none"
+      className="fixed inset-0 -z-10 w-full h-full pointer-events-none opacity-90"
       aria-hidden="true"
     />
   )

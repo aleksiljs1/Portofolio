@@ -1,8 +1,7 @@
-import { IcosahedronGeometry, InstancedMesh, ShaderMaterial, Color, Vector2, Matrix4, BufferAttribute } from 'three'
+import { IcosahedronGeometry, InstancedMesh, ShaderMaterial, Color, Vector2, Matrix4, BufferAttribute, AdditiveBlending } from 'three'
 import type { Object3D } from 'three'
 import gsap from 'gsap'
 
-// Module-level refs for update / dispose
 let mesh: InstancedMesh | null = null
 let geometry: IcosahedronGeometry | null = null
 let material: ShaderMaterial | null = null
@@ -15,26 +14,27 @@ export function createNodes(
 ): void {
   const nodeCount = positions.length
 
-  geometry = new IcosahedronGeometry(0.06, 1)
+  geometry = new IcosahedronGeometry(0.18, 1)   // 3× larger — actually visible
 
   material = new ShaderMaterial({
     uniforms: {
       uTime:       { value: 0 },
       uMouse:      { value: new Vector2(0, 0) },
       uBaseColor:  { value: new Color(0x38bdf8) },
-      uPulseColor: { value: new Color(0x818cf8) },
+      uPulseColor: { value: new Color(0xa78bfa) },  // violet-400 for pulse pop
     },
+    blending: AdditiveBlending,   // nodes add light — always bright on dark bg
+    depthWrite: false,
+    transparent: true,
     vertexShader: `
-      attribute float aPulse;     // per-instance, 0.0–1.0
+      attribute float aPulse;
       varying float vPulse;
       varying vec3 vNormal;
 
       void main() {
-        vPulse = aPulse;
+        vPulse  = aPulse;
         vNormal = normalize(normalMatrix * normal);
-
-        // Scale node up during pulse
-        vec3 pos = position * (1.0 + aPulse * 0.8);
+        vec3 pos = position * (1.0 + aPulse * 1.2);
         gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
       }
     `,
@@ -45,27 +45,19 @@ export function createNodes(
       varying vec3 vNormal;
 
       void main() {
-        // Fresnel rim — edges glow brighter
-        float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.5);
-
-        // Mix base and pulse color
-        vec3 color = mix(uBaseColor, uPulseColor, vPulse);
-
-        // Brighten edges (fresnel)
-        color += vec3(fresnel * 0.4);
-
-        // Alpha: slightly transparent core, bright rim
-        float alpha = 0.7 + fresnel * 0.3 + vPulse * 0.3;
-
+        float fresnel = pow(1.0 - abs(dot(vNormal, vec3(0.0, 0.0, 1.0))), 2.0);
+        vec3 color    = mix(uBaseColor, uPulseColor, vPulse);
+        // Strong core + rim glow — additive blending makes this bright
+        float core  = 0.5 - length(vNormal.xy) * 0.3;
+        float alpha = clamp(core + fresnel * 0.9 + vPulse * 0.4, 0.0, 1.0);
+        color += vec3(fresnel * 0.5 + vPulse * 0.3);
         gl_FragColor = vec4(color, alpha);
       }
     `,
-    transparent: true,
   })
 
-  // Per-instance aPulse attribute
   aPulseArray = new Float32Array(nodeCount)
-  bufAttr = new BufferAttribute(aPulseArray, 1)
+  bufAttr     = new BufferAttribute(aPulseArray, 1)
   geometry.setAttribute('aPulse', bufAttr)
 
   mesh = new InstancedMesh(geometry, material, nodeCount)
@@ -77,37 +69,30 @@ export function createNodes(
     mesh.setMatrixAt(i, mat4)
   }
   mesh.instanceMatrix.needsUpdate = true
-
   scene.add(mesh)
 }
 
 export function pulseNode(index: number): void {
   if (!aPulseArray || !bufAttr) return
-
   gsap.to(aPulseArray, {
     [index]: 1.0,
-    duration: 0.4,
+    duration: 0.35,
     ease: 'power2.out',
-    onUpdate: () => {
-      if (bufAttr) bufAttr.needsUpdate = true
-    },
+    onUpdate: () => { if (bufAttr) bufAttr.needsUpdate = true },
     onComplete: () => {
       if (!aPulseArray || !bufAttr) return
       gsap.to(aPulseArray, {
         [index]: 0.0,
-        duration: 0.4,
+        duration: 0.6,
         ease: 'power2.in',
-        onUpdate: () => {
-          if (bufAttr) bufAttr.needsUpdate = true
-        },
+        onUpdate: () => { if (bufAttr) bufAttr.needsUpdate = true },
       })
     },
   })
 }
 
 export function updateNodes(time: number): void {
-  if (!material) return
-  material.uniforms.uTime.value = time
+  if (material) material.uniforms.uTime.value = time
 }
 
 export function disposeNodes(): void {
@@ -115,9 +100,6 @@ export function disposeNodes(): void {
   mesh.removeFromParent()
   geometry?.dispose()
   material?.dispose()
-  mesh = null
-  geometry = null
-  material = null
-  aPulseArray = null
-  bufAttr = null
+  mesh = null; geometry = null; material = null
+  aPulseArray = null; bufAttr = null
 }

@@ -204,9 +204,9 @@ export function initScene(canvas: HTMLCanvasElement): void {
     // 5. Scene + Camera + Fog
     scene = new Scene()
     camera = new PerspectiveCamera(60, w / h, 0.1, 100)
-    camera.position.set(0, 0, 18)
+    camera.position.set(0, 0, 14)   // closer = bigger nodes on screen
     camera.lookAt(0, 0, 0)
-    scene.fog = new FogExp2(0x050810, 0.045)
+    scene.fog = new FogExp2(0x050810, 0.018)  // much thinner fog
 
     sceneGroup = new Group()
     scene.add(sceneGroup)
