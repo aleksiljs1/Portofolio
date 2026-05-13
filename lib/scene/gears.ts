@@ -79,8 +79,9 @@ function hubCircleGeo(r: number): BufferGeometry {
 }
 
 type GearGroup = Group & { _speed: number }
-let gearGroups: GearGroup[] = []
-let parentScene: Object3D | null = null
+let gearGroups:    GearGroup[]  = []
+let parentScene:   Object3D | null = null
+let currentPage:   string = '/'
 
 function buildGearGroup(cfg: GearConfig): GearGroup {
   const group = new Group() as GearGroup
@@ -130,7 +131,8 @@ function disposeGroup(g: GearGroup) {
 }
 
 export function createGears(scene: Object3D, pathname = '/'): void {
-  parentScene = scene
+  parentScene  = scene
+  currentPage  = pathname
   for (const cfg of getConfig(pathname)) {
     const g = buildGearGroup(cfg)
     gearGroups.push(g)
@@ -146,13 +148,10 @@ export function transitionGears(newPathname: string): void {
   const oldGroups = [...gearGroups]
   gearGroups = []
 
-  const oldIdx = PAGE_ORDER.indexOf(
-    oldGroups[0]
-      ? PAGE_ORDER.find((p) => PAGE_CONFIGS[p]?.length === oldGroups.length) ?? '/'
-      : '/'
-  )
+  const oldIdx = PAGE_ORDER.indexOf(currentPage)
   const newIdx = PAGE_ORDER.indexOf(newPathname)
-  const dir    = newIdx >= oldIdx ? -1 : 1   // -1 = slide left, 1 = slide right
+  const dir    = newIdx >= oldIdx ? -1 : 1   // forward → slide left, back → slide right
+  currentPage  = newPathname
   const dist   = 28
 
   // Slide old gears out
