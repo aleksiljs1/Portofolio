@@ -52,12 +52,12 @@ interface TierConfig {
 }
 
 function detectHardwareTier(): HardwareTier {
-  const cores = navigator.hardwareConcurrency ?? 2
-  const mem = (navigator as any).deviceMemory ?? 2
-  const isMobile = window.innerWidth < 768
+  const cores = navigator.hardwareConcurrency ?? 4   // default assumes mid-range
+  const mem = (navigator as any).deviceMemory ?? 4   // deviceMemory absent on Firefox/non-HTTPS → assume 4
+  const isMobile = window.innerWidth < 480            // only kill on very small screens
 
-  if (isMobile || cores <= 2 || mem <= 1) return 'low'
-  if (cores <= 4 || mem <= 3) return 'mid'
+  if (isMobile || (cores <= 2 && mem <= 1)) return 'low'   // needs both to be weak
+  if (cores <= 2 || mem <= 2) return 'mid'
   return 'high'
 }
 
@@ -318,10 +318,14 @@ export function destroyScene(): void {
   window.removeEventListener('resize', onResize)
   document.removeEventListener('visibilitychange', onVisibilityChange)
 
-  // Dispose renderer — releases WebGL context
+  // Dispose renderer — DO NOT call forceContextLoss():
+  // React 18 StrictMode fires the useEffect cleanup then immediately
+  // re-mounts. forceContextLoss() permanently kills the canvas context,
+  // so the second mount's WebGLRenderer gets a dead canvas.
+  // renderer.dispose() is sufficient — it frees GPU memory without
+  // nuking the context slot.
   if (renderer) {
     renderer.dispose()
-    renderer.forceContextLoss()
     renderer = null
   }
 

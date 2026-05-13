@@ -32,7 +32,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="bg-[#050810]">
+      <body className="bg-transparent">
         <SceneBackgroundLoader />
         <Providers>
           <Navbar />
