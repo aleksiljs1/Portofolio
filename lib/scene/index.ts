@@ -1,9 +1,4 @@
-import { WebGLRenderer } from 'three/src/renderers/WebGLRenderer.js'
-import { Scene } from 'three/src/scenes/Scene.js'
-import { PerspectiveCamera } from 'three/src/cameras/PerspectiveCamera.js'
-import { FogExp2 } from 'three/src/scenes/FogExp2.js'
-import { Group } from 'three/src/objects/Group.js'
-
+import { WebGLRenderer, Scene, PerspectiveCamera, FogExp2, Group } from 'three'
 import { generateEdges, computeLayout } from './layout'
 import { createNodes, pulseNode, updateNodes, disposeNodes } from './nodes'
 import { createEdges, disposeEdges } from './edges'

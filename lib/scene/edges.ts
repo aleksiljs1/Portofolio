@@ -1,9 +1,5 @@
-import { LineSegments } from 'three/src/objects/LineSegments.js'
-import { LineBasicMaterial } from 'three/src/materials/LineBasicMaterial.js'
-import { BufferGeometry } from 'three/src/core/BufferGeometry.js'
-import { Float32BufferAttribute } from 'three/src/core/BufferAttribute.js'
+import { LineSegments, LineBasicMaterial, BufferGeometry, Float32BufferAttribute } from 'three'
 import type { Object3D } from 'three'
-
 // Module-level refs for dispose
 let lines: LineSegments | null = null
 let geometry: BufferGeometry | null = null

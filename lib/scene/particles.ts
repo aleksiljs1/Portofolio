@@ -1,10 +1,5 @@
-import { Points } from 'three/src/objects/Points.js'
-import { BufferGeometry } from 'three/src/core/BufferGeometry.js'
-import { BufferAttribute } from 'three/src/core/BufferAttribute.js'
-import { ShaderMaterial } from 'three/src/materials/ShaderMaterial.js'
-import { Vector3 } from 'three/src/math/Vector3.js'
+import { Points, BufferGeometry, BufferAttribute, ShaderMaterial, Vector3 } from 'three'
 import type { Object3D } from 'three'
-
 // Module-level refs for dispose
 let geometry: BufferGeometry | null = null
 let material: ShaderMaterial | null = null

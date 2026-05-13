@@ -1,4 +1,4 @@
-import { Vector3 } from 'three/src/math/Vector3.js'
+import { Vector3 } from 'three'
 
 /** Place nodeCount points randomly inside a sphere of given radius. */
 function randomInSphere(count: number, radius: number): Vector3[] {

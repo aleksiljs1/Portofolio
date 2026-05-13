@@ -1,10 +1,4 @@
-import { IcosahedronGeometry } from 'three/src/geometries/IcosahedronGeometry.js'
-import { InstancedMesh } from 'three/src/objects/InstancedMesh.js'
-import { ShaderMaterial } from 'three/src/materials/ShaderMaterial.js'
-import { Color } from 'three/src/math/Color.js'
-import { Vector2 } from 'three/src/math/Vector2.js'
-import { Matrix4 } from 'three/src/math/Matrix4.js'
-import { BufferAttribute } from 'three/src/core/BufferAttribute.js'
+import { IcosahedronGeometry, InstancedMesh, ShaderMaterial, Color, Vector2, Matrix4, BufferAttribute } from 'three'
 import type { Object3D } from 'three'
 import gsap from 'gsap'
 
