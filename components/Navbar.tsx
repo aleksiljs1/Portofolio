@@ -168,7 +168,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/contact"
+              href="/about"
               className="text-sm border border-sky-400 text-sky-400 hover:bg-sky-400/10 transition-colors px-4 py-1.5 rounded-md"
             >
               Contact
@@ -241,7 +241,7 @@ export default function Navbar() {
             )}
 
             <Link
-              href="/contact"
+              href="/about"
               className="text-sm border border-sky-400 text-sky-400 hover:bg-sky-400/10 transition-colors px-4 py-2 rounded-md text-center"
               onClick={() => setMobileOpen(false)}
             >

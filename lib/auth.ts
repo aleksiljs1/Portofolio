@@ -12,16 +12,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null
-        const user = await db.adminUser.findUnique({
-          where: { email: credentials.email as string },
-        })
-        if (!user) return null
-        const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
-        if (!valid) return null
-        return { id: user.id, email: user.email }
+        try {
+          const user = await db.adminUser.findUnique({
+            where: { email: credentials.email as string },
+          })
+          if (!user) return null
+          const valid = await bcrypt.compare(credentials.password as string, user.passwordHash)
+          if (!valid) return null
+          return { id: user.id, email: user.email }
+        } catch {
+          return null
+        }
       },
     }),
   ],
   pages: { signIn: '/admin/login' },
   session: { strategy: 'jwt' },
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id
+        token.email = user.email
+      }
+      return token
+    },
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string
+      }
+      return session
+    },
+  },
 })
