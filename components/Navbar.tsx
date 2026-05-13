@@ -51,15 +51,15 @@ export default function Navbar() {
     <nav className="fixed top-0 z-20 w-full bg-white/5 backdrop-blur-md border-b border-white/10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xs font-bold bg-sky-400/10 border border-sky-400/30 text-sky-400 px-2 py-1 rounded">
+          {/* Logo — clicks go home */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <span className="font-mono text-xs font-bold bg-sky-400/10 border border-sky-400/30 text-sky-400 px-2 py-1 rounded group-hover:bg-sky-400/20 transition-colors">
               AI
             </span>
-            <span className="text-white font-medium tracking-tight">
+            <span className="text-white font-medium tracking-tight group-hover:text-sky-400 transition-colors">
               Aleksandros Iljas
             </span>
-          </div>
+          </Link>
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
@@ -190,6 +190,13 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="md:hidden border-t border-white/10 bg-[#050810]/95 backdrop-blur-md">
           <div className="flex flex-col px-4 py-4 gap-4">
+            <Link
+              href="/"
+              className="text-white/70 hover:text-white transition-colors text-sm"
+              onClick={() => setMobileOpen(false)}
+            >
+              Home
+            </Link>
             <Link
               href="/projects"
               className="text-white/70 hover:text-white transition-colors text-sm"
