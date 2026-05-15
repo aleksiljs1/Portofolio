@@ -5,15 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
 import { MenuIcon, X } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
 import { useFilterStore } from '@/lib/store'
 
 interface TechItem {
@@ -63,95 +54,74 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-6">
-            {/* Projects with hover dropdown */}
+            {/* Projects with hover dropdown — custom, no portal */}
             <div
               className="relative"
               onMouseEnter={openDropdown}
               onMouseLeave={scheduleClose}
             >
-              <DropdownMenu
-                open={dropdownOpen}
-                onOpenChange={(open) => {
-                  if (!open) setDropdownOpen(false)
-                }}
-                modal={false}
+              <button
+                className="text-white/70 hover:text-white transition-colors text-sm bg-transparent border-0 p-0 cursor-pointer"
+                onClick={() => router.push('/projects')}
               >
-                <DropdownMenuTrigger
-                  className="text-white/70 hover:text-white transition-colors text-sm bg-transparent border-0 p-0 cursor-pointer"
-                  onClick={() => router.push('/projects')}
-                >
-                  Projects
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="w-56 bg-[#0a0f1e]/90 backdrop-blur-md border-white/10 text-white"
-                  onMouseEnter={openDropdown}
-                  onMouseLeave={scheduleClose}
-                >
+                Projects
+              </button>
+
+              {dropdownOpen && (
+                <div className="absolute left-0 top-full w-52 rounded-xl border border-white/10 bg-[#0a0f1e]/95 backdrop-blur-md shadow-xl overflow-hidden">
+                  {/* invisible bridge so mouse can move from trigger into panel */}
+                  <div className="h-2 w-full" />
+
                   {frameworks.length > 0 && (
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-white/40 uppercase tracking-wider text-[10px]">
-                        Frameworks
-                      </DropdownMenuLabel>
+                    <div className="px-2 pb-1">
+                      <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-white/40">Frameworks</p>
                       {frameworks.map((item) => (
-                        <DropdownMenuItem
+                        <button
                           key={item.id}
-                          className="text-sky-400 hover:text-sky-300 cursor-pointer"
-                          onClick={() => {
-                            setActiveTech(item.name)
-                            setDropdownOpen(false)
-                          }}
+                          className="w-full text-left rounded px-2 py-1.5 text-sm text-sky-400 hover:bg-white/10 hover:text-sky-300 transition-colors"
+                          onClick={() => { setActiveTech(item.name); router.push('/projects'); setDropdownOpen(false) }}
                         >
                           {item.name}
-                        </DropdownMenuItem>
+                        </button>
                       ))}
-                    </DropdownMenuGroup>
+                    </div>
                   )}
                   {frameworks.length > 0 && languages.length > 0 && (
-                    <DropdownMenuSeparator className="bg-white/10" />
+                    <div className="mx-2 border-t border-white/10" />
                   )}
                   {languages.length > 0 && (
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-white/40 uppercase tracking-wider text-[10px]">
-                        Languages
-                      </DropdownMenuLabel>
+                    <div className="px-2 py-1">
+                      <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-white/40">Languages</p>
                       {languages.map((item) => (
-                        <DropdownMenuItem
+                        <button
                           key={item.id}
-                          className="text-indigo-400 hover:text-indigo-300 cursor-pointer"
-                          onClick={() => {
-                            setActiveTech(item.name)
-                            setDropdownOpen(false)
-                          }}
+                          className="w-full text-left rounded px-2 py-1.5 text-sm text-indigo-400 hover:bg-white/10 hover:text-indigo-300 transition-colors"
+                          onClick={() => { setActiveTech(item.name); router.push('/projects'); setDropdownOpen(false) }}
                         >
                           {item.name}
-                        </DropdownMenuItem>
+                        </button>
                       ))}
-                    </DropdownMenuGroup>
+                    </div>
                   )}
                   {languages.length > 0 && skills.length > 0 && (
-                    <DropdownMenuSeparator className="bg-white/10" />
+                    <div className="mx-2 border-t border-white/10" />
                   )}
                   {skills.length > 0 && (
-                    <DropdownMenuGroup>
-                      <DropdownMenuLabel className="text-white/40 uppercase tracking-wider text-[10px]">
-                        Skills
-                      </DropdownMenuLabel>
+                    <div className="px-2 py-1 pb-2">
+                      <p className="px-2 py-1 text-[10px] uppercase tracking-wider text-white/40">Skills</p>
                       {skills.map((item) => (
-                        <DropdownMenuItem
+                        <button
                           key={item.id}
-                          className="text-white/70 hover:text-white cursor-pointer"
-                          onClick={() => {
-                            setActiveTech(item.name)
-                            setDropdownOpen(false)
-                          }}
+                          className="w-full text-left rounded px-2 py-1.5 text-sm text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                          onClick={() => { setActiveTech(item.name); router.push('/projects'); setDropdownOpen(false) }}
                         >
                           {item.name}
-                        </DropdownMenuItem>
+                        </button>
                       ))}
-                    </DropdownMenuGroup>
+                    </div>
                   )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+                </div>
+              )}
             </div>
 
             <Link
@@ -230,6 +200,7 @@ export default function Navbar() {
                       key={item.id}
                       onClick={() => {
                         setActiveTech(item.name)
+                        router.push('/projects')
                         setMobileOpen(false)
                       }}
                       className={`text-xs px-2 py-1 rounded border transition-colors ${

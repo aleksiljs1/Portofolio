@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, GitBranch, X } from 'lucide-react'
+import { ExternalLink, GitBranch, Search, X } from 'lucide-react'
 import { useFilterStore } from '@/lib/store'
 import type { Project } from '@/components/ProjectCard'
 
@@ -125,7 +125,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
   return (
     <button
       onClick={onClick}
-      className="text-left w-full rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-sky-400/30 transition-all duration-300 overflow-hidden group flex flex-col cursor-pointer"
+      className="text-left w-full rounded-xl border border-white/15 bg-[#0c1627] hover:bg-[#0f1d35] hover:border-sky-400/30 transition-all duration-300 overflow-hidden group flex flex-col cursor-pointer"
     >
       {/* Image / gradient top */}
       <div className="relative h-44 w-full overflow-hidden shrink-0">
@@ -146,7 +146,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
         <h3 className="text-white text-sm font-semibold mb-2 leading-snug">
           {project.title}
         </h3>
-        <p className="text-white/55 text-xs leading-relaxed line-clamp-3 flex-1 mb-3">
+        <p className="text-white/75 text-xs leading-relaxed line-clamp-3 flex-1 mb-3">
           {project.description}
         </p>
 
@@ -177,6 +177,7 @@ function ProjectCard({ project, onClick }: { project: Project; onClick: () => vo
 
 export default function ProjectsPage() {
   const [selected, setSelected] = useState<Project | null>(null)
+  const [search, setSearch] = useState('')
 
   const { data: projects = [], isLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
@@ -186,9 +187,15 @@ export default function ProjectsPage() {
   const activeTech    = useFilterStore((s) => s.activeTech)
   const setActiveTech = useFilterStore((s) => s.setActiveTech)
 
-  const filtered = activeTech
-    ? projects.filter((p) => p.techItems.some((pt) => pt.techItem.name === activeTech))
-    : projects
+  const filtered = projects.filter((p) => {
+    const matchesTech = !activeTech || p.techItems.some((pt) => pt.techItem.name === activeTech)
+    const q = search.trim().toLowerCase()
+    const matchesSearch = !q ||
+      p.title.toLowerCase().includes(q) ||
+      (p.description ?? '').toLowerCase().includes(q) ||
+      p.techItems.some((pt) => pt.techItem.name.toLowerCase().includes(q))
+    return matchesTech && matchesSearch
+  })
 
   return (
     <>
@@ -199,6 +206,26 @@ export default function ProjectsPage() {
           <div className="mb-10">
             <h1 className="text-3xl font-bold text-white mb-2">Projects</h1>
             <p className="text-white/50 text-sm">Click any card to see full details.</p>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-4 max-w-md">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search projects…"
+              className="w-full rounded-lg border border-white/10 bg-white/5 pl-9 pr-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-sky-400/50"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
+                aria-label="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
 
           {/* Filter bar */}
